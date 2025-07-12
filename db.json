@@ -1,0 +1,22 @@
+{
+  "users": [
+    { "id": "1", "username": "admin", "password": "1234", "fullName": "Administrator" }
+  ],
+  "products": [
+    {
+      "id": "1",
+      "name": "hoodie",
+
+
+      "price": 150000,
+      "image": "https://via.placeholder.com/150"
+    },
+    {
+      "id": "2",
+      "name": "sneakers",
+      "price": 250000,
+      "image": "https://via.placeholder.com/150"
+    }
+  ]
+}
+
