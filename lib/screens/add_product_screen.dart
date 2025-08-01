@@ -1,105 +1,150 @@
-// lib/screens/add_product_screen.dart
 import 'package:flutter/material.dart';
-import '../models/product.dart';
-import '../services/product_service.dart'; // Impor service produk Anda
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AddProductScreen extends StatefulWidget {
+  const AddProductScreen({super.key});
+
   @override
-  _AddProductScreenState createState() => _AddProductScreenState();
+  State<AddProductScreen> createState() => _AddProductScreenState();
 }
 
 class _AddProductScreenState extends State<AddProductScreen> {
-  final _formKey = GlobalKey<FormState>(); // Kunci untuk validasi form
-  final _nameController = TextEditingController(); // Controller untuk input nama produk
-  final _priceController = TextEditingController(); // Controller untuk input harga
-  final _imageUrlController = TextEditingController(); // Controller untuk input URL gambar
+  final _nameController = TextEditingController();
+  final _priceController = TextEditingController();
+  final _imageController = TextEditingController();
 
-  final ProductService _productService = ProductService(); // Instansi dari service produk kita
+  String? selectedCategory; // ✅ null di awal
+  final List<String> categories = [
+    'Makanan',
+    'Minuman',
+    'Fashion',
+    'Elektronik',
+    'Lainnya',
+  ];
 
-  @override
-  void dispose() {
-    // Penting untuk membuang controller saat widget tidak lagi digunakan untuk menghindari kebocoran memori
-    _nameController.dispose();
-    _priceController.dispose();
-    _imageUrlController.dispose();
-    super.dispose();
-  }
+  void _addProduct() async {
+    final name = _nameController.text.trim();
+    final price = double.tryParse(_priceController.text.trim()) ?? 0;
+    final imageUrl = _imageController.text.trim();
 
-  void _saveProduct() async {
-    if (_formKey.currentState!.validate()) { // Memeriksa apakah semua input form valid
-      final newProduct = Product(
-        id: DateTime.now().millisecondsSinceEpoch, // Menggunakan timestamp sebagai ID sementara. Firestore akan memberikan ID unik sendiri.
-        name: _nameController.text, // Mengambil nama dari input teks
-        price: int.parse(_priceController.text), // Mengambil harga dari input teks dan mengubahnya menjadi integer
-        imageUrl: _imageUrlController.text, // Mengambil URL gambar dari input teks
+    if (name.isEmpty || price <= 0 || imageUrl.isEmpty || selectedCategory == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Semua field harus diisi')),
       );
-
-      try {
-        await _productService.addProduct(newProduct); // Memanggil fungsi untuk menambahkan produk ke Firebase
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Produk berhasil ditambahkan!')), // Menampilkan pesan sukses
-        );
-        Navigator.pop(context); // Kembali ke halaman sebelumnya (HomeScreen)
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal menambahkan produk: $e')), // Menampilkan pesan error jika gagal
-        );
-      }
+      return;
     }
+
+    await FirebaseFirestore.instance.collection('products').add({
+      'name': name,
+      'price': price,
+      'imageUrl': imageUrl,
+      'category': selectedCategory,
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Produk berhasil ditambahkan')),
+    );
+
+    _nameController.clear();
+    _priceController.clear();
+    _imageController.clear();
+    setState(() {
+      selectedCategory = null; // reset dropdown
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: Text('Tambah Produk Baru'), // Judul AppBar
+        title: const Text('Tambah Produk', style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.black,
+        elevation: 0,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0), // Memberi sedikit jarak di sekitar form
-        child: Form(
-          key: _formKey, // Menghubungkan form dengan kunci validasi
-          child: ListView( // Menggunakan ListView agar form bisa di-scroll jika isinya banyak
-            children: <Widget>[
-              TextFormField(
+        padding: const EdgeInsets.all(16.0),
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              // 🔵 NAMA PRODUK
+              TextField(
                 controller: _nameController,
-                decoration: InputDecoration(labelText: 'Nama Produk'), // Label untuk input nama
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Nama produk tidak boleh kosong'; // Validasi: nama tidak boleh kosong
-                  }
-                  return null;
-                },
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Nama Produk',
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  filled: true,
+                  fillColor: Colors.grey[900],
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
               ),
-              SizedBox(height: 16.0), // Jarak antar input
-              TextFormField(
+              const SizedBox(height: 10),
+
+              // 🔵 HARGA PRODUK
+              TextField(
                 controller: _priceController,
-                decoration: InputDecoration(labelText: 'Harga'), // Label untuk input harga
-                keyboardType: TextInputType.number, // Mengatur keyboard agar hanya menampilkan angka
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Harga tidak boleh kosong'; // Validasi: harga tidak boleh kosong
-                  }
-                  if (int.tryParse(value) == null) {
-                    return 'Harga harus angka'; // Validasi: harga harus berupa angka
-                  }
-                  return null;
+                keyboardType: TextInputType.number,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Harga Produk',
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  filled: true,
+                  fillColor: Colors.grey[900],
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // 🔵 URL GAMBAR PRODUK
+              TextField(
+                controller: _imageController,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'URL Gambar Produk',
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  filled: true,
+                  fillColor: Colors.grey[900],
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // 🔵 DROPDOWN KATEGORI
+              DropdownButtonFormField<String>(
+                value: selectedCategory,
+                dropdownColor: Colors.grey[900],
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Pilih Kategori',
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  filled: true,
+                  fillColor: Colors.grey[900],
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                items: categories.map((category) {
+                  return DropdownMenuItem<String>(
+                    value: category,
+                    child: Text(category),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    selectedCategory = value;
+                  });
                 },
               ),
-              SizedBox(height: 16.0),
-              TextFormField(
-                controller: _imageUrlController,
-                decoration: InputDecoration(labelText: 'URL Gambar'), // Label untuk input URL gambar
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'URL Gambar tidak boleh kosong'; // Validasi: URL gambar tidak boleh kosong
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 24.0),
+
+              const SizedBox(height: 20),
+
+              // 🔵 BUTTON TAMBAH PRODUK
               ElevatedButton(
-                onPressed: _saveProduct, // Memanggil fungsi _saveProduct saat tombol ditekan
-                child: Text('Simpan Produk'), // Teks pada tombol
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  minimumSize: const Size.fromHeight(50),
+                ),
+                onPressed: _addProduct,
+                child: const Text('Tambah Produk', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),

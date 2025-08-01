@@ -37,7 +37,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             builder: (context, setModalState) {
               return Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: SingleChildScrollView(
+                child: SingleChildScrollView( // ✅ supaya bisa scroll kalau konten panjang
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
@@ -86,14 +86,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           Navigator.pop(context);
 
                           // ✅ Tambahkan produk ke keranjang dengan informasi tambahan
-                          cartService.addToCart(
-                            widget.product,
-                            extras: {
-                              'level': selectedLevel,
-                              'toppings': selectedToppings,
-                              'drink': selectedDrink,
-                            },
-                          );
+                          cartService.addToCart(widget.product);
 
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -101,7 +94,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   'Produk ditambahkan ke keranjang\n'
                                       'Level: ${selectedLevel ?? "-"}\n'
                                       'Topping: ${selectedToppings.isNotEmpty ? selectedToppings.join(", ") : "-"}\n'
-                                      'Minuman: ${selectedDrink ?? "-"}'),
+                                      'Minuman: ${selectedDrink ?? "-"}'
+                              ),
                             ),
                           );
                         },

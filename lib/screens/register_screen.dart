@@ -1,41 +1,93 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'login_screen.dart';
+import '../services/auth_service.dart';
+import 'home_screen.dart';
 
-class RegisterScreen extends StatelessWidget {
-  final usernameController = TextEditingController();
-  final passwordController = TextEditingController();
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
 
-  void register(BuildContext context) async {
-    String username = usernameController.text.trim();
-    String password = passwordController.text.trim();
+  @override
+  State<RegisterScreen> createState() => _RegisterScreenState();
+}
 
-    if (username.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Semua field wajib diisi')));
-      return;
+class _RegisterScreenState extends State<RegisterScreen> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _authService = AuthService();
+  bool _loading = false;
+
+  void _register() async {
+    setState(() => _loading = true);
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    final String? error = await _authService.signUp(email, password);
+
+    setState(() => _loading = false);
+
+    if (error == null) {
+      // ✅ Register sukses → langsung ke Home
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+    } else {
+      // ✅ Register gagal → tampilkan pesan error
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
     }
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('saved_username', username);
-    await prefs.setString('saved_password', password);
-
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Registrasi Berhasil')));
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => LoginScreen()));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Register')),
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: const Text('Daftar', style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.black,
+        elevation: 0,
+      ),
       body: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            TextField(controller: usernameController, decoration: InputDecoration(labelText: 'Username')),
-            TextField(controller: passwordController, decoration: InputDecoration(labelText: 'Password'), obscureText: true),
-            SizedBox(height: 20),
-            ElevatedButton(onPressed: () => register(context), child: Text('Register')),
+            TextField(
+              controller: _emailController,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Email',
+                labelStyle: const TextStyle(color: Colors.white70),
+                filled: true,
+                fillColor: Colors.grey[900],
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _passwordController,
+              obscureText: true,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Password',
+                labelStyle: const TextStyle(color: Colors.white70),
+                filled: true,
+                fillColor: Colors.grey[900],
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+            const SizedBox(height: 20),
+            _loading
+                ? const CircularProgressIndicator(color: Colors.white)
+                : ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                minimumSize: const Size.fromHeight(50),
+              ),
+              onPressed: _register,
+              child: const Text('Daftar', style: TextStyle(color: Colors.white)),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Sudah punya akun? Login', style: TextStyle(color: Colors.white70)),
+            ),
           ],
         ),
       ),

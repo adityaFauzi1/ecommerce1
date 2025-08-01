@@ -1,92 +1,107 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
-import '../models/product.dart';
-import 'package:lottie/lottie.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/cart_service.dart';
+import 'checkout_screen.dart'; // Ganti import ke checkout_screen.dart
+import 'success_screen.dart';
 
 class CartScreen extends StatefulWidget {
+  const CartScreen({super.key});
+
   @override
-  _CartScreenState createState() => _CartScreenState();
+  State<CartScreen> createState() => _CartScreenState();
 }
 
 class _CartScreenState extends State<CartScreen> {
-  List<Product> cartItems = [];
+  final cartService = CartService();
 
-  @override
-  void initState() {
-    super.initState();
-    loadCart();
-  }
-
-  void loadCart() async {
-    final prefs = await SharedPreferences.getInstance();
-    List<String> cart = prefs.getStringList('cart') ?? [];
-    setState(() {
-      cartItems = cart.map((item) => Product.fromJson(json.decode(item))).toList();
-    });
-  }
-
-  void checkout() async {
-    int total = cartItems.fold(0, (sum, item) => sum + item.price);
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text("Pembayaran"),
-        content: Text("Total yang harus dibayar: Rp $total"),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: Text("Batal"),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              // Simulasi pembayaran berhasil
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.remove('cart');
-              setState(() {
-                cartItems.clear();
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Pembayaran berhasil")),
-              );
-            },
-            child: Text("Bayar"),
-          )
-        ],
-      ),
+  // Fungsi checkout sekarang hanya bernavigasi
+  void _proceedToCheckout() {
+    if (cartService.cart.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Keranjang Anda kosong!')),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const CheckoutScreen()),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final cart = cartService.cart;
+
+    // Hitung total belanja
+    double total = cart.fold(0, (sum, item) => sum + item.totalPrice);
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Keranjang'),
-      ),
-      body: cartItems.isEmpty
-          ? Center(child: Text('Keranjang kosong'))
+      appBar: AppBar(title: const Text('Keranjang')),
+      body: cart.isEmpty
+          ? const Center(child: Text('Keranjang kosong'))
           : Column(
         children: [
           Expanded(
             child: ListView.builder(
-              itemCount: cartItems.length,
-              itemBuilder: (_, i) => ListTile(
-                leading: Image.network(cartItems[i].imageUrl, width: 50, height: 50, fit: BoxFit.cover),
-                title: Text(cartItems[i].name),
-                subtitle: Text('Rp ${cartItems[i].price}'),
-              ),
+              itemCount: cart.length,
+              itemBuilder: (context, index) {
+                final item = cart[index];
+                return ListTile(
+                  leading: Image.network(item.product.imageUrl, width: 50, height: 50),
+                  title: Text(item.product.name),
+                  subtitle: Text(
+                    'Rp ${item.product.price.toStringAsFixed(0)} x ${item.quantity}\n'
+                        '${item.extras != null ? "Tambahan: ${item.extras!['level']}, ${item.extras!['toppings'].join(', ')}, ${item.extras!['drink']}" : ""}',
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove),
+                        onPressed: () {
+                          setState(() => cartService.decreaseQuantity(item.product));
+                        },
+                      ),
+                      Text('${item.quantity}'),
+                      IconButton(
+                        icon: const Icon(Icons.add),
+                        onPressed: () {
+                          setState(() => cartService.increaseQuantity(item.product));
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
           ),
+          // Tampilan total dan tombol checkout
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton(
-              onPressed: checkout,
-              child: Text('Checkout'),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Total:', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    Text('Rp ${total.toStringAsFixed(0)}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _proceedToCheckout, // Panggil fungsi ini
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                    ),
+                    child: const Text('Checkout', style: TextStyle(fontSize: 18)),
+                  ),
+                ),
+              ],
             ),
-          ),
+          )
         ],
       ),
     );

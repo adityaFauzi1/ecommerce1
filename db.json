@@ -1,22 +1,33 @@
 {
-  "users": [
-    { "id": "1", "username": "admin", "password": "1234", "fullName": "Administrator" }
-  ],
-  "products": [
+  "payment_methods": [
     {
-      "id": "1",
-      "name": "hoodie",
-
-
-      "price": 150000,
-      "image": "https://via.placeholder.com/150"
+      "id": "va",
+      "name": "Virtual Account"
     },
     {
-      "id": "2",
-      "name": "sneakers",
-      "price": 250000,
-      "image": "https://via.placeholder.com/150"
+      "id": "cod",
+      "name": "Cash on Delivery"
+    },
+    {
+      "id": "gopay",
+      "name": "GoPay"
+    }
+  ],
+  "shipping_methods": [
+    {
+      "id": "standard",
+      "name": "Standard (2-3 hari)",
+      "price": 10000
+    },
+    {
+      "id": "express",
+      "name": "Express (1 hari)",
+      "price": 20000
+    },
+    {
+      "id": "sameday",
+      "name": "Same Day (hari ini)",
+      "price": 30000
     }
   ]
 }
-
